@@ -1,3 +1,15 @@
+# This repository
+
+This [repository](https://github.com/mousetrap-js/mousetrap) was created in January 2016 to merge pull requests and fix some of the long standing bugs with mousetrap.js
+
+[@ccampbell](https://github.com/ccampbell) did a great job with mousetrap but there are some outstanding bugs that need to be fixed and sadly he is no longer maintaining the original repo.
+
+Towards that end this repo accepts pull requests and requests to be added as a maintainer.
+
+For the time being the policy should be not to add any new features, I'll only be fixing issues (including missing keys).
+
+I would hope at some stage to merge this repo back into the original. In the meantime please post any new issues here.
+
 # Mousetrap
 
 Mousetrap is a simple library for handling keyboard shortcuts in Javascript.
