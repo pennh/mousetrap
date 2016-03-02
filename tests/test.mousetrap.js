@@ -241,17 +241,6 @@
                 }
             });
 
-            it('keyup event should fire', function() {
-                var spy;
-                letters.forEach( function( letter ){
-                    spy = sinon.spy()
-
-                    Mousetrap.bind( letter, spy, 'keyup' );
-                    KeyEvent.simulate( letter.toUpperCase().charCodeAt(0), keyCodes[letter] );
-                    expect(spy.callCount).to.equal(1, 'keyup event for "'+ letter +'" should fire');
-                });
-            });
-
             it('return false should prevent default and stop propagation', function() {
                 var spy;
 
@@ -303,6 +292,184 @@
                     expect(spy.callCount).to.equal(0, 'callback should not fire for shift + '+ letter);
                 });
             });
+        });
+
+        describe('numbers', function() {
+            var numbers = [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ];
+
+            it('test fire when pressed', function(){
+                numbers.forEach( function( number ){
+                    var spy = sinon.spy();
+
+                    Mousetrap.bind( number, spy );
+
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number]);
+
+                    expect(spy.callCount).to.equal( 1, 'callback should fire once');
+                    expect(spy.args[0][0]).to.be.an.instanceOf( Event, 'first argument should be Event');
+                    expect(spy.args[0][1]).to.equal( number, 'second argument should be key combo');
+                });
+            });
+
+            it('fire from keydown', function() {
+                numbers.forEach( function( number ){
+                    var spy = sinon.spy();
+
+                    Mousetrap.bind( number, spy, 'keydown' );
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number]);
+
+                    expect(spy.callCount).to.equal( 1, 'callback should fire once');
+                    expect(spy.args[0][0]).to.be.an.instanceOf(Event, 'first argument should be Event');
+                    expect(spy.args[0][1]).to.equal( number, 'second argument should be key combo');
+
+                    Mousetrap.reset();
+                });
+            });
+
+            it('only fire when correct number is pressed', function() {
+                numbers.forEach( function( number ){
+                    var spy = sinon.spy();
+                            
+                    Mousetrap.bind( number, spy, 'keydown' );
+
+                    numbers.forEach( function( othernumber ){
+                        if ( othernumber !== number ){
+                            KeyEvent.simulate( othernumber.charCodeAt(0), keyCodes[othernumber]);
+
+                            expect(spy.callCount).to.equal( 0, 'callback shouldn\'t fire');
+                        }
+                    });
+                            
+                    expect(spy.callCount).to.equal( 0, 'callback shouldn\'t fire');
+                });
+            });
+
+            it('don\'t fire when holding a modifier key', function() {
+                var spy = sinon.spy();
+                var modifiers = ['ctrl', 'meta', 'shift'];
+                var charCode;
+                var modifier;
+
+                numbers.forEach( function( number ){
+                    var spy = sinon.spy();
+                    Mousetrap.bind( number, spy );
+
+                    for (var i = 0; i < 4; i++) {
+                        modifier = modifiers[i];
+                        charCode = number.charCodeAt(0);
+
+                        spy.reset();
+
+                        KeyEvent.simulate(charCode, keyCodes[number], [modifier]);
+
+                        expect(spy.callCount, number + ' failed for ' + modifier ).to.equal( 0 );
+                    }
+                });
+            });
+
+            it('fire keyup events', function() {
+                var spy;
+                numbers.forEach( function( number ){
+                    spy = sinon.spy();
+                            
+                    Mousetrap.bind( number, spy, 'keyup' );
+
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
+
+                    expect(spy.callCount).to.equal(1, 'keyup event for "'+ number +'" should fire');
+
+                    // for key held down we should only get one key up
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number], [], document, 10);
+                    expect(spy.callCount).to.equal(2, 'keyup event for "'+ number +'" should fire once for held down key');
+                });
+            });
+
+            it('rebinding a key overwrites the callback for that key', function() {
+                var spy1, spy2;
+
+                numbers.forEach( function( number ){
+                    spy1 = sinon.spy();
+                    spy2 = sinon.spy();
+                            
+                    Mousetrap.bind( number, spy1 );
+                    Mousetrap.bind( number, spy2 );
+
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
+
+                    expect(spy1.callCount).to.equal(0, 'original callback should not fire');
+                    expect(spy2.callCount).to.equal(1, 'new callback should fire');
+                });
+            });
+
+            it('binding an array of keys containing the number', function() {
+                var spy;
+                
+                for( var i = 0; i < numbers.count - 3; i = i + 3 ){
+                    spy = sinon.spy();
+                    portion = numbers.slice( i, i + 3 );
+                    Mousetrap.bind( portion, spy);
+
+                    portion.forEach(function( p ){
+                        KeyEvent.simulate( p.charCodeAt(0), 65);
+                        expect(spy.callCount).to.equal(1, 'new callback was called');
+                        expect(spy.args[0][1]).to.equal( p, 'callback should match "'+ p +'"');
+                    });
+                }
+            });
+
+            it('return false should prevent default and stop propagation', function() {
+                var spy;
+
+                numbers.forEach( function( number ){
+                    spy = sinon.spy(function() {
+                        return false;
+                    });
+
+                    Mousetrap.bind( number, spy );
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
+
+                    expect(spy.callCount).to.equal(1, 'callback should fire');
+                    expect(spy.args[0][0]).to.be.an.instanceOf(Event, 'first argument should be Event');
+                    expect(spy.args[0][0].defaultPrevented).to.be.true;
+
+                    // cancelBubble is not correctly set to true in webkit/blink
+                    //
+                    // @see https://code.google.com/p/chromium/issues/detail?id=162270
+                    // expect(spy.args[0][0].cancelBubble).to.be.true;
+
+                    // try without return false
+                    spy = sinon.spy();
+                    Mousetrap.bind( number, spy );
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
+
+                    expect(spy.callCount).to.equal(1, 'callback should fire');
+                    expect(spy.args[0][0]).to.be.an.instanceOf(Event, 'first argument should be Event');
+                    expect(spy.args[0][0].cancelBubble).to.be.falsey;
+                    expect(spy.args[0][0].defaultPrevented).to.be.falsey;
+                });
+            });
+
+            /*
+            it('shift key is ignored', function() {
+                var spy;
+
+                numbers.forEach( function( number ){
+                    spy = sinon.spy();
+                    Mousetrap.bind( number, spy );
+
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
+                    expect(spy.callCount).to.equal(1, 'callback should fire for lowercase '+ number);
+
+                    spy.reset();
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
+                    expect(spy.callCount).to.equal(1, 'callback should fire for uppercase '+ number );
+
+                    spy.reset();
+                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number], ['shift'] );
+                    expect(spy.callCount).to.equal(0, 'callback should not fire for shift + '+ number);
+                });
+            });
+            */
         });
 
         describe('special characters', function() {
