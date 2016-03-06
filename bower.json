@@ -1,0 +1,27 @@
+{
+  "name": "mousetrap-js",
+  "version": "1.5.4",
+  "description": "Simple library for handling keyboard shortcuts (latest)",
+  "main": "mousetrap.js",
+  "authors": [
+    "Craig Campbell"
+  ],
+  "license": "Apache 2.0",
+  "keywords": [
+    "keyboard",
+    "shortcuts",
+    "events"
+  ],
+  "homepage": "https://github.com/mousetrap-js/mousetrap",
+  "moduleType": [
+    "globals"
+  ],
+  "ignore": [
+    "Gruntfile.js",
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
