@@ -346,7 +346,7 @@
 
             it('don\'t fire when holding a modifier key', function() {
                 var spy = sinon.spy();
-                var modifiers = ['ctrl', 'meta', 'shift'];
+                var modifiers = ['ctrl', 'meta'];
                 var charCode;
                 var modifier;
 
@@ -354,8 +354,7 @@
                     var spy = sinon.spy();
                     Mousetrap.bind( number, spy );
 
-                    for (var i = 0; i < 4; i++) {
-                        modifier = modifiers[i];
+                    modifiers.forEach( function( modifier ){
                         charCode = number.charCodeAt(0);
 
                         spy.reset();
@@ -363,7 +362,41 @@
                         KeyEvent.simulate(charCode, keyCodes[number], [modifier]);
 
                         expect(spy.callCount, number + ' failed for ' + modifier ).to.equal( 0 );
-                    }
+                    });
+                });
+            });
+
+            it('don\'t fire when shift is held', function() {
+                var spy = sinon.spy();
+                var modifier = 'shift';
+                var charCode;
+
+                var charCodes = [
+                    ')', '!', '"', '£', '$', '%', '^', '&', '*', '('
+                ];
+
+                numbers.forEach( function( number ){
+                    var integer = parseInt( number );
+
+                    Mousetrap.bind( number, spy );
+                    KeyEvent.simulate( charCodes[integer], keyCodes[integer], [modifier] );
+
+                    expect( spy.callCount, number + ' failed for ' + modifier ).to.equal( 0 );
+                    spy.reset();
+                });
+            });
+
+            it('fire when alt is held', function() {
+                var spy = sinon.spy();
+                var charCode;
+
+                numbers.forEach( function( number ){
+                    Mousetrap.bind( number, spy );
+                    charCode = number.charCodeAt(0);
+                    KeyEvent.simulate( charCode, keyCodes[number], ['alt'] );
+
+                    expect( spy.callCount, number + ' failed for alt' ).to.equal( 1 );
+                    spy.reset();
                 });
             });
 
@@ -448,28 +481,6 @@
                     expect(spy.args[0][0].defaultPrevented).to.be.falsey;
                 });
             });
-
-            /*
-            it('shift key is ignored', function() {
-                var spy;
-
-                numbers.forEach( function( number ){
-                    spy = sinon.spy();
-                    Mousetrap.bind( number, spy );
-
-                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
-                    expect(spy.callCount).to.equal(1, 'callback should fire for lowercase '+ number);
-
-                    spy.reset();
-                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number] );
-                    expect(spy.callCount).to.equal(1, 'callback should fire for uppercase '+ number );
-
-                    spy.reset();
-                    KeyEvent.simulate( number.charCodeAt(0), keyCodes[number], ['shift'] );
-                    expect(spy.callCount).to.equal(0, 'callback should not fire for shift + '+ number);
-                });
-            });
-            */
         });
 
         describe('special characters', function() {
