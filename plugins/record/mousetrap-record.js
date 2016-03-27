@@ -90,6 +90,9 @@
 
             if (character.length === 1 && _recordedCharacterKey) {
                 _recordCurrentCombo();
+                if (_options.recordSequence) {
+                    _restartRecordTimer();
+                }
             }
 
             for (i = 0; i < modifiers.length; ++i) {
@@ -101,6 +104,11 @@
         // count as a keypress
         } else if (e.type == 'keyup' && _currentRecordedKeys.length > 0) {
             _recordCurrentCombo();
+            if (_options.recordSequence) {
+                _restartRecordTimer();
+            } else {
+                _finishRecording();
+            }
         }
     }
 
@@ -134,10 +142,11 @@
      * @returns void
      */
     function _recordCurrentCombo() {
-        _recordedSequence.push(_currentRecordedKeys);
+        if (_currentRecordedKeys.length > 0) {
+            _recordedSequence.push(_currentRecordedKeys);
+        }
         _currentRecordedKeys = [];
         _recordedCharacterKey = false;
-        _restartRecordTimer();
     }
 
     /**
@@ -186,7 +195,12 @@
 
         if (callback) {
             _normalizeSequence(sequence);
-            callback(sequence);
+            //return only the first element of the sequence if sequence recording is disabled
+            if (_options.recordSequence) {
+                callback(sequence);
+            } else {
+                callback([sequence[0]]);
+            }
         }
     }
 
@@ -211,11 +225,7 @@
      */
     function _restartRecordTimer() {
         clearTimeout(_recordTimer);
-        if (_options.recordSequence) {
-            _recordTimer = setTimeout(_finishRecording, 1000);
-        } else {
-            _finishRecording();
-        }
+        _recordTimer = setTimeout(_finishRecording, 1000);
     }
 
     /**
@@ -260,13 +270,17 @@
     };
 
     /**
-     * Manually stops the record
+     * Manually stops the record and passes null to callback
      *
      * @returns void
      */
     Mousetrap.prototype.stopRecord = function() {
         this.recording = false;
+        var callback = _recordedSequenceCallback;
         _resetState();
+        if (callback) {
+            callback(null);
+        }
     };
 
     Mousetrap.prototype.handleKey = function() {
