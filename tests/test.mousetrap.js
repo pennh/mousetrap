@@ -168,6 +168,36 @@ describe('Mousetrap.bind', function() {
             KeyEvent.simulate('A'.charCodeAt(0), 65, ['shift']);
             expect(spy.callCount).to.equal(0, 'callback should not fire fort shift+a');
         });
+
+        it('bind with append true- multi binding', function() {
+            var spy1 = sinon.spy();
+            Mousetrap.bind('a', spy1, undefined, true);
+
+            KeyEvent.simulate('a'.charCodeAt(0), 65);
+            expect(spy1.callCount).to.equal(1, 'callback should fire for lowercase a');
+
+            var spy2 = sinon.spy();
+            Mousetrap.bind('a', spy2, undefined, true);
+
+            KeyEvent.simulate('a'.charCodeAt(0), 65);
+            expect(spy1.callCount).to.equal(2, 'callback should fire for a first callback');
+            expect(spy2.callCount).to.equal(1, 'callback should fire for a second callback');
+        });
+
+        it('bind with append false', function() {
+            var spy1 = sinon.spy();
+            Mousetrap.bind('a', spy1, undefined, false);
+
+            KeyEvent.simulate('a'.charCodeAt(0), 65);
+            expect(spy1.callCount).to.equal(1, 'callback should fire for lowercase a');
+
+            var spy2 = sinon.spy();
+            Mousetrap.bind('a', spy2, undefined, false);
+
+            KeyEvent.simulate('a'.charCodeAt(0), 65);
+            expect(spy1.callCount).to.equal(1, 'callback should not fire for a first callback');
+            expect(spy2.callCount).to.equal(1, 'callback should fire for a second callback');
+        });
     });
 
     describe('special characters', function() {
@@ -615,6 +645,26 @@ describe('Mousetrap.unbind', function() {
         KeyEvent.simulate('b'.charCodeAt(0), 66);
         KeyEvent.simulate('c'.charCodeAt(0), 67);
         expect(spy.callCount).to.equal(3, 'callback should not fire after unbind');
+    });
+
+    it('unbind with replaceCallback', function() {
+        var spy1 = sinon.spy();
+        var spy2 = sinon.spy();
+
+        Mousetrap.bind('a', spy1);
+        KeyEvent.simulate('a'.charCodeAt(0), 65);
+        expect(spy1.callCount).to.equal(1, 'callback for a should fire');
+
+        Mousetrap.unbind('a', undefined, spy2);
+        KeyEvent.simulate('a'.charCodeAt(0), 65);
+        expect(spy1.callCount).to.equal(2, 'callback for a should be fire after unbind of another callback');
+        expect(spy2.callCount).to.equal(0, 'callback for a should not be fired it was never binded');
+
+        Mousetrap.unbind('a', undefined, spy1);
+        KeyEvent.simulate('a'.charCodeAt(0), 65);
+
+        expect(spy1.callCount).to.equal(2, 'callback for a should not be fire after unbind of same callback');
+        expect(spy2.callCount).to.equal(0, 'callback for a should not be fired it was never binded');
     });
 });
 

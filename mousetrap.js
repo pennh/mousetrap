@@ -140,6 +140,12 @@
     var _REVERSE_MAP;
 
     /**
+     * An empty function
+     *
+     * @type {Function}
+     */
+    var _EMPTY_FUNCTION = function() {};
+    /**
      * loop through the f keys, f1 to f19 and add them to the map
      * programatically
      */
@@ -536,9 +542,10 @@
          * @param {string=} sequenceName - name of the sequence we are looking for
          * @param {string=} combination
          * @param {number=} level
+         * @param {Function|undefined} removeCallback - Remove a specific command that has callback equals to removeCallback (specific unbind in multi binding)
          * @returns {Array}
          */
-        function _getMatches(character, modifiers, e, sequenceName, combination, level) {
+        function _getMatches(character, modifiers, e, sequenceName, combination, level, removeCallback) {
             var i;
             var callback;
             var matches = [];
@@ -587,7 +594,8 @@
                     // @todo make deleting its own method?
                     var deleteCombo = !sequenceName && callback.combo == combination;
                     var deleteSequence = sequenceName && callback.seq == sequenceName && callback.level == level;
-                    if (deleteCombo || deleteSequence) {
+                    var deleteSpecificCallback = !removeCallback || removeCallback && callback.callback === removeCallback;
+                    if (deleteSpecificCallback && (deleteCombo || deleteSequence)) {
                         self._callbacks[character].splice(i, 1);
                     }
 
@@ -821,17 +829,15 @@
         }
 
         /**
-         * binds a single keyboard combination
+         * prepare search data for finding a command
          *
          * @param {string} combination
-         * @param {Function} callback
          * @param {string=} action
-         * @param {string=} sequenceName - name of sequence if part of sequence
-         * @param {number=} level - what part of the sequence the command is
-         * @returns void
+         * @param {Function} callback
+         *
+         * @returns {Object}
          */
-        function _bindSingle(combination, callback, action, sequenceName, level) {
-
+        function _prepareSearchData(combination, action, callback) {
             // store a direct mapped reference for use with Mousetrap.trigger
             self._directMap[combination + ':' + action] = callback;
 
@@ -844,8 +850,11 @@
             // if this pattern is a sequence of keys then run through this method
             // to reprocess each pattern one key at a time
             if (sequence.length > 1) {
-                _bindSequence(combination, sequence, callback, action);
-                return;
+                return {
+                    combination: combination,
+                    sequence: sequence,
+                    isBindSequence: true
+                };
             }
 
             info = _getKeyInfo(combination, action);
@@ -854,8 +863,59 @@
             // a callback is added for this key
             self._callbacks[info.key] = self._callbacks[info.key] || [];
 
+            return {
+                combination: combination,
+                sequence: sequence,
+                isBindSequence: false,
+                info: info
+            };
+        }
+
+        /**
+         * unbind a keyboard combination
+         *
+         * @param {string} combination
+         * @param {string=} action
+         * @param {Function|undefined} removeCallback - Remove a specific command that has callback equals to removeCallback (specific unbind in multi binding)
+         *
+         * @returns void
+         */
+        function _unbind(combination, action, removeCallback) {
+            var oSearchedData = _prepareSearchData(combination, action, _EMPTY_FUNCTION);
+
+            if (oSearchedData.isBindSequence) {
+                _bindSequence(combination, oSearchedData.sequence, _EMPTY_FUNCTION, action);
+                return;
+            }
+
             // remove an existing match if there is one
-            _getMatches(info.key, info.modifiers, {type: info.action}, sequenceName, combination, level);
+            _getMatches(oSearchedData.info.key, oSearchedData.info.modifiers, {type: oSearchedData.info.action}, undefined, oSearchedData.combination, undefined, removeCallback);
+        }
+
+        /**
+         * binds a single keyboard combination
+         *
+         * @param {string} combination
+         * @param {Function} callback
+         * @param {string=} action
+         * @param {string=} sequenceName - name of sequence if part of sequence
+         * @param {number=} level - what part of the sequence the command is
+         * @param {boolean|undefined} append - If append is true add a command. If append is false remove all commands and add the command
+         *
+         * @returns void
+         */
+        function _bindSingle(combination, callback, action, sequenceName, level, append) {
+            var oSearchedData = _prepareSearchData(combination, action, callback);
+
+            if (oSearchedData.isBindSequence) {
+                _bindSequence(combination, oSearchedData.sequence, callback, action);
+                return;
+            }
+
+            // remove an existing match if there is one
+            if (!append) {
+                _getMatches(oSearchedData.info.key, oSearchedData.info.modifiers, {type: oSearchedData.info.action}, sequenceName, combination, level);
+            }
 
             // add this call back to the array
             // if it is a sequence put it at the beginning
@@ -863,10 +923,10 @@
             //
             // this is important because the way these are processed expects
             // the sequence ones to come first
-            self._callbacks[info.key][sequenceName ? 'unshift' : 'push']({
+            self._callbacks[oSearchedData.info.key][sequenceName ? 'unshift' : 'push']({
                 callback: callback,
-                modifiers: info.modifiers,
-                action: info.action,
+                modifiers: oSearchedData.info.modifiers,
+                action: oSearchedData.info.action,
                 seq: sequenceName,
                 level: level,
                 combo: combination
@@ -879,11 +939,28 @@
          * @param {Array} combinations
          * @param {Function} callback
          * @param {string|undefined} action
+         * @param {boolean|undefined} append - If append is true add a command. If append is false remove all commands and add the command
+         *
          * @returns void
          */
-        self._bindMultiple = function(combinations, callback, action) {
+        self._bindMultiple = function(combinations, callback, action, append) {
             for (var i = 0; i < combinations.length; ++i) {
-                _bindSingle(combinations[i], callback, action);
+                _bindSingle(combinations[i], callback, action, undefined, undefined, append);
+            }
+        };
+
+        /**
+         * unbinds multiple combinations to the same callback
+         *
+         * @param {Array} combinations
+         * @param {string|undefined} action
+         * @param {Function|undefined} removeCallback - Remove a specific command that has callback equals to removeCallback (specific unbind in multi binding)
+         *
+         * @returns void
+         */
+        self._unbindMultiple = function(combinations, action, removeCallback) {
+            for (var i = 0; i < combinations.length; ++i) {
+                _unbind(combinations[i], action, removeCallback);
             }
         };
 
@@ -905,35 +982,38 @@
      * @param {string|Array} keys
      * @param {Function} callback
      * @param {string=} action - 'keypress', 'keydown', or 'keyup'
+     * @param {boolean|undefined} append - If append is true add a command. If append is false remove all commands and add the command
+
      * @returns void
      */
-    Mousetrap.prototype.bind = function(keys, callback, action) {
+    Mousetrap.prototype.bind = function(keys, callback, action, append) {
         var self = this;
         keys = keys instanceof Array ? keys : [keys];
-        self._bindMultiple.call(self, keys, callback, action);
+        self._bindMultiple.call(self, keys, callback, action, append);
         return self;
     };
 
     /**
      * unbinds an event to mousetrap
      *
-     * the unbinding sets the callback function of the specified key combo
-     * to an empty function and deletes the corresponding key in the
+     * remove the command from the _callbacks dictionary.
+     * the unbinding deletes the corresponding key in the
      * _directMap dict.
-     *
-     * TODO: actually remove this from the _callbacks dictionary instead
-     * of binding an empty function
      *
      * the keycombo+action has to be exactly the same as
      * it was defined in the bind method
      *
      * @param {string|Array} keys
      * @param {string} action
+     * @param {Function|undefined} removeCallback - Remove a specific command that has callback equals to removeCallback (specific unbind in multi binding)
      * @returns void
      */
-    Mousetrap.prototype.unbind = function(keys, action) {
+    Mousetrap.prototype.unbind = function(keys, action, removeCallback) {
         var self = this;
-        return self.bind.call(self, keys, function() {}, action);
+        keys = keys instanceof Array ? keys : [keys];
+
+        self._unbindMultiple.call(self, keys, action, removeCallback);
+        return self;
     };
 
     /**
