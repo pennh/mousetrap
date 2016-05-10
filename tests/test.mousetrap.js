@@ -198,6 +198,22 @@ describe('Mousetrap.bind', function() {
             expect(spy1.callCount).to.equal(1, 'callback should not fire for a first callback');
             expect(spy2.callCount).to.equal(1, 'callback should fire for a second callback');
         });
+
+        it('bind with append undefined', function() {
+            var spy1 = sinon.spy();
+            Mousetrap.bind('a', spy1, undefined, undefined);
+
+            KeyEvent.simulate('a'.charCodeAt(0), 65);
+            expect(spy1.callCount).to.equal(1, 'callback should fire for lowercase a');
+
+            var spy2 = sinon.spy();
+            Mousetrap.bind('a', spy2, undefined, undefined);
+
+            KeyEvent.simulate('a'.charCodeAt(0), 65);
+            expect(spy1.callCount).to.equal(1, 'callback should not fire for a first callback');
+            expect(spy2.callCount).to.equal(1, 'callback should fire for a second callback');
+        });
+
     });
 
     describe('special characters', function() {

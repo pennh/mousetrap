@@ -145,6 +145,7 @@
      * @type {Function}
      */
     var _EMPTY_FUNCTION = function() {};
+
     /**
      * loop through the f keys, f1 to f19 and add them to the map
      * programatically
@@ -594,7 +595,7 @@
                     // @todo make deleting its own method?
                     var deleteCombo = !sequenceName && callback.combo == combination;
                     var deleteSequence = sequenceName && callback.seq == sequenceName && callback.level == level;
-                    var deleteSpecificCallback = !removeCallback || removeCallback && callback.callback === removeCallback;
+                    var deleteSpecificCallback = !removeCallback || (removeCallback && callback.callback === removeCallback);
                     if (deleteSpecificCallback && (deleteCombo || deleteSequence)) {
                         self._callbacks[character].splice(i, 1);
                     }
