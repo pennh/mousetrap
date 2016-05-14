@@ -64,6 +64,16 @@ If you would like to donate to help support Mousetrap development use [Gittip](h
         Mousetrap.bind('up up down down left right left right b a enter', function() {
             console.log('konami code');
         });
+		
+		// multiple callbacks to the same sequence, append = true
+		var FIRST_FUNCTION = function() { console.log('first callback of a') };
+		var SECOND_FUNCTION = function() { console.log('second callback of a') };
+		
+		Mousetrap.bind('a', FIRST_FUNCTION, undefined, true);
+		Mousetrap.bind('a', SECOND_FUNCTION, undefined, true);
+		
+		// unbind a specific callback
+		Mousetrap.unbind('a', undefined, FIRST_FUNCTION);
     </script>
     ```
 
